@@ -9,7 +9,13 @@ COPY requirements.txt ./
 COPY app.py dto.py mappers.py matching.py ./
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Define Lambda handler entry point (file.function)
 CMD ["app.lambda_handler"]
+
+
+
+
+
+

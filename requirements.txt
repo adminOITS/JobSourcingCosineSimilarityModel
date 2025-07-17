@@ -1,3 +1,2 @@
-boto3
-requests
-scikit-learn
+requests=2.28.2
+scikit-learn=1.2.2

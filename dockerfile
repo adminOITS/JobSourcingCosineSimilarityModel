@@ -1,21 +1,30 @@
-# Use the official AWS Lambda Python 3.11 image
 FROM public.ecr.aws/lambda/python:3.11
 
 # Set working directory
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-# Copy all source files
+# Install OS-level build dependencies
+RUN yum update -y && \
+    yum groupinstall -y "Development Tools" && \
+    yum install -y \
+        gcc \
+        gcc-c++ \
+        python3-devel \
+        atlas-devel \
+        blas-devel \
+        lapack-devel \
+        openblas-devel \
+        libffi-devel \
+        findutils \
+    && yum clean all
+
+# Copy source files and requirements
 COPY requirements.txt ./
 COPY app.py dto.py mappers.py matching.py ./
 
-# Install Python dependencies
-RUN pip install -r requirements.txt
+# Install Python packages
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Define Lambda handler entry point (file.function)
+# Define Lambda entrypoint
 CMD ["app.lambda_handler"]
-
-
-
-
-
-

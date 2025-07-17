@@ -1,5 +1,5 @@
 from typing import List
-from dtos import (
+from dto import (
     CandidateSkillResponseDto,
     JobOfferSkillResponseDto,
     SkillProficiencyLevel,

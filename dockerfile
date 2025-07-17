@@ -1,29 +1,18 @@
-# Use a full-featured Python base image that supports compilation
-FROM python:3.11-slim
+# Use the official AWS Lambda Python 3.11 image
+FROM public.ecr.aws/lambda/python:3.11
 
-# Set environment variables to avoid prompts and enable UTF-8
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
-    LANG=C.UTF-8
-
-# Install system packages needed to build numpy and scikit-learn
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    g++ \
-    python3-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install build tools and required system packages
+RUN yum -y install gcc gcc-c++ python3-devel && yum clean all
 
 # Set working directory
-WORKDIR /app
+WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Copy source files
 COPY requirements.txt ./
 COPY app.py dto.py mappers.py matching.py ./
 
-# Install dependencies
+# Install Python dependencies
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Define entry point for Lambda compatibility (optional)
+# Lambda handler
 CMD ["app.lambda_handler"]

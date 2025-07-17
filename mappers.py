@@ -131,7 +131,7 @@ def map_profile_response_dto(data: dict) -> ProfileResponseDto:
     return ProfileResponseDto(
         profileTitle=data.get("profileTitle", ""),
         category=data.get("category"),
-        candidateResponseDto=map_candidate_response_dto(data.get("candidate", {})),
+        candidate=map_candidate_response_dto(data.get("candidate", {})),
         skills=map_candidate_skills(data.get("skills", [])),
     )
 

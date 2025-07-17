@@ -150,6 +150,7 @@ def lambda_handler(event, context):
 
         logger.info(f"Matching result: {json.dumps(result)}")
 
+
         store_result_in_dynamodb(
                 offer_id=offer_id,
                 profile_id=profile_id,

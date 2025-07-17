@@ -1,14 +1,15 @@
-# Use the official AWS Lambda Python runtime as a parent image
+# Use the official AWS Lambda Python 3.11 image
 FROM public.ecr.aws/lambda/python:3.11
 
-# Copy the requirements file into the container
-COPY requirements.txt ${LAMBDA_TASK_ROOT}
-COPY LmabdaParsingCode.py ${LAMBDA_TASK_ROOT}
+# Set working directory
+WORKDIR ${LAMBDA_TASK_ROOT}
 
-# Install any needed packages specified in requirements.txt
-RUN pip install -r requirements.txt
+# Copy all source files
+COPY requirements.txt ./
+COPY app.py dto.py mappers.py matching.py ./
 
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-
-# Command to run the Lambda function
+# Define Lambda handler entry point (file.function)
 CMD ["app.lambda_handler"]

@@ -4,6 +4,7 @@ from datetime import datetime
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+from decimal import Decimal
 from dto import (
     JobOfferSkillResponseDto,
     CandidateSkillResponseDto,
@@ -255,53 +256,48 @@ def transform_matching_rate(cosine_similarity_score: float) -> float:
 
 
 
-def calculate_all_matching_scores(offer: JobOfferResponseDto, profile: ProfileResponseDto) -> Dict[str, float]:
+
+
+def calculate_all_matching_scores(offer: JobOfferResponseDto, profile: ProfileResponseDto) -> Dict[str, Decimal]:
     candidate = profile.candidate
 
     return {
-        "skillMatch": transform_matching_rate(float(calculate_skill_match_score_v2(offer.skills, profile.skills))),
-        "experienceMatch": transform_matching_rate(float(calculate_experience_match_score_v2(offer.experiences, candidate.experiences))),
-        "educationMatch": transform_matching_rate(float(calculate_education_match_score_v2(offer.educations, candidate.education))),
-        "languageMatch": transform_matching_rate(float(calculate_language_match_score_v2(offer.languages, candidate.languages))),
-        "locationMatch": transform_matching_rate(float(calculate_location_match_score(offer.city, offer.country, offer.zipCode, candidate.address))),
-        "titleMatch": transform_matching_rate(float(calculate_title_match_score(offer.title, profile.profileTitle)))
+        "skillMatch": Decimal(str(transform_matching_rate(float(calculate_skill_match_score_v2(offer.skills, profile.skills))))),
+        "experienceMatch": Decimal(str(transform_matching_rate(float(calculate_experience_match_score_v2(offer.experiences, candidate.experiences))))),
+        "educationMatch": Decimal(str(transform_matching_rate(float(calculate_education_match_score_v2(offer.educations, candidate.education))))),
+        "languageMatch": Decimal(str(transform_matching_rate(float(calculate_language_match_score_v2(offer.languages, candidate.languages))))),
+        "locationMatch": Decimal(str(transform_matching_rate(float(calculate_location_match_score(offer.city, offer.country, offer.zipCode, candidate.address))))),
+        "titleMatch": Decimal(str(transform_matching_rate(float(calculate_title_match_score(offer.title, profile.profileTitle)))))
     }
 
 
-def calculate_total_match_score(scores: dict, weights: dict = None) -> float:
-    """
-    Calculate weighted average from individual matching scores.
-    
-    :param scores: Dict of match scores (e.g., skillMatch, experienceMatch, etc.)
-    :param weights: Dict of weights per match type (defaults to equal weighting)
-    :return: Weighted match score rounded to 2 decimal places
-    """
-    if not scores:
-        return 0.0
 
-    # Default to equal weights if not provided
+def calculate_total_match_score(scores: dict, weights: dict = None) -> Decimal:
+    if not scores:
+        return Decimal("0.0")
+
     if weights is None:
-        # Define custom weights (optional)
         weights = {
-            'skillMatch': 0.4,
-            'experienceMatch': 0.3,
-            'educationMatch': 0.1,
-            'languageMatch': 0.1,
-            'locationMatch': 0.05,
-            'titleMatch': 0.05
+            'skillMatch': Decimal("0.4"),
+            'experienceMatch': Decimal("0.3"),
+            'educationMatch': Decimal("0.1"),
+            'languageMatch': Decimal("0.1"),
+            'locationMatch': Decimal("0.05"),
+            'titleMatch': Decimal("0.05")
         }
 
-    weighted_sum = 0.0
-    total_weight = 0.0
+    weighted_sum = Decimal("0.0")
+    total_weight = Decimal("0.0")
 
     for key, value in scores.items():
-        weight = weights.get(key, 1.0)
-        weighted_sum += value * weight
+        weight = weights.get(key, Decimal("1.0"))
+        weighted_sum += Decimal(str(value)) * weight
         total_weight += weight
 
     if total_weight == 0:
-        return 0.0
+        return Decimal("0.0")
 
-    return round(weighted_sum / total_weight, 2)
+    return (weighted_sum / total_weight).quantize(Decimal("0.01"))  # Round to 2 decimals
+
 
 

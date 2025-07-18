@@ -47,7 +47,7 @@ def store_result_in_dynamodb(offer_id, profile_id, candidate_id, scores: dict, s
         ReturnValues="UPDATED_NEW"
     )
 
-    logger.info(f"DynamoDB update response: {json.dumps(response)}")
+    logger.info(f"DynamoDB update response: {response}")
 
 
 
@@ -57,7 +57,7 @@ def get_parameter(name, with_decryption=False):
 
 
 def fetch_offer_dto(gateway_url, headers ,offer_id):
-    url = f"{gateway_url}/JOB-OFFER-SERVICE/api/v1/offers/{offer_id}/matching"
+    url = f"{gateway_url}/JOB-OFFER-SERVICE/api/v1/job-offers/{offer_id}/matching"
     logger.info(f"Fetching offer from: {url}")
     response = requests.get(url,headers=headers, timeout=30)
     response.raise_for_status()
@@ -148,7 +148,7 @@ def lambda_handler(event, context):
         # Calculate scores
         result = calculate_all_matching_scores(offer_dto, profile_dto)
 
-        logger.info(f"Matching result: {json.dumps(result)}")
+        logger.info(f"Matching result: {result}")
 
 
         store_result_in_dynamodb(
@@ -165,21 +165,36 @@ def lambda_handler(event, context):
 
     except Exception as e:
         logger.exception("Error during Lambda execution")
-        # Extract IDs if available to log failure
-        offer_id = body.get("offerId")
-        profile_id = body.get("profileId")
-        candidate_id = body.get("candidateId", "UNKNOWN")
+        
+        # Attempt to extract IDs from the message body (if it exists)
+        offer_id = None
+        profile_id = None
+        candidate_id = "UNKNOWN"
+        
+        try:
+            record = event['Records'][0]
+            body = json.loads(record['body'])
+            offer_id = body.get("offerId")
+            profile_id = body.get("profileId")
+            candidate_id = body.get("candidateId", "UNKNOWN")
+        except Exception as parse_error:
+            logger.warning(f"Failed to parse message body for IDs: {str(parse_error)}")
 
-        # Only store in DynamoDB if both IDs are available
+        # Attempt to store failed status in DynamoDB
         if offer_id and profile_id:
-            store_result_in_dynamodb(
-                offer_id=offer_id,
-                profile_id=profile_id,
-                candidate_id=candidate_id,
-                scores={},  # No scores on failure
-                status="FAILED"
-            )
+            try:
+                store_result_in_dynamodb(
+                    offer_id=offer_id,
+                    profile_id=profile_id,
+                    candidate_id=candidate_id,
+                    scores={},  # No scores on failure
+                    status="FAILED"
+                )
+            except Exception as db_error:
+                logger.warning(f"Failed to store FAILED status in DynamoDB: {str(db_error)}")
+
+        # Optional: return 200 to delete the message from the queue anyway
         return {
-            "statusCode": 500,
+            "statusCode": 500,  # or 200 if you want to delete message despite failure
             "body": json.dumps({"error": str(e)})
         }

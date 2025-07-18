@@ -91,7 +91,7 @@ def get_access_token():
 
 
 CLIENT_SECRET_KEYCLOAK=get_parameter("/llama/client_secret_keycloak", with_decryption=True)
-gateway_url = get_ssm_param("/jobsourcing/env/dev/gateway/url")
+gateway_url = get_parameter("/jobsourcing/env/dev/gateway/url")
 
 def lambda_handler(event, context):
     """

@@ -57,14 +57,14 @@ def get_parameter(name, with_decryption=False):
 
 
 def fetch_offer_dto(gateway_url, headers ,offer_id):
-    url = f"{gateway_url}/OFFER-SERVICE/api/v1/offers/{offer_id}/matching"
+    url = f"{gateway_url}/JOB-OFFER-SERVICE/api/v1/offers/{offer_id}/matching"
     logger.info(f"Fetching offer from: {url}")
     response = requests.get(url,headers=headers, timeout=30)
     response.raise_for_status()
     return response
 
 def fetch_profile_dto(gateway_url,headers ,candidate_id ,profile_id):
-    url = f"{gateway_url}/PROFILE-SERVICE/api/v1/candidates/{candidate_id}/profiles/{profile_id}/matching"
+    url = f"{gateway_url}/CANDIDATE-SERVICE/api/v1/candidates/{candidate_id}/profiles/{profile_id}/matching"
     logger.info(f"Fetching profile from: {url}")
     response = requests.get(url,headers=headers, timeout=30)
     response.raise_for_status()

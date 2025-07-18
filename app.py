@@ -30,7 +30,7 @@ def store_result_in_dynamodb(offer_id, profile_id, candidate_id, scores: dict, s
         UpdateExpression="""
             SET 
                 candidateId = :cid,
-                status = :status,
+                processing_status = :status,
                 matchDetails = :md,
                 totalMatch = :tm,
                 updatedAt = :upd,

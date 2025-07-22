@@ -131,8 +131,12 @@ def lambda_handler(event, context):
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-        offer_json = fetch_offer_dto(gateway_url, headers ,offer_id)
-        profile_json = fetch_profile_dto(gateway_url,headers ,candidate_id ,profile_id)
+        offer_res = fetch_offer_dto(gateway_url, headers ,offer_id)
+        logger.info(f"offerFetch: {offer_res}")
+        offer_json= offer_res.json()
+        profile_res = fetch_profile_dto(gateway_url,headers ,candidate_id ,profile_id)
+        logger.info(f"profileFetch: {profile_res}")
+        profile_json=profile_res.json()
 
         if not offer_json or not profile_json:
             logger.error("Missing 'offerDto' or 'profileDto' in the payload")
@@ -143,7 +147,9 @@ def lambda_handler(event, context):
 
         # Map to DTOs
         offer_dto = map_job_offer_response_dto(offer_json)
+        logger.info(f"offerMapped: {offer_dto}")
         profile_dto = map_profile_response_dto(profile_json)
+        logger.info(f"profileMapped: {profile_dto}")
 
         # Calculate scores
         result = calculate_all_matching_scores(offer_dto, profile_dto)
@@ -162,6 +168,7 @@ def lambda_handler(event, context):
             "statusCode": 200,
             "body": json.dumps(result)
         }
+        
 
     except Exception as e:
         logger.exception("Error during Lambda execution")

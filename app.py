@@ -16,7 +16,7 @@ dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table("MatchingResults")
 
 sqs = boto3.client('sqs')
-TARGET_QUEUE_URL = "https://sqs.eu-west-1.amazonaws.com/381922912532/jobSourcingMatchingCosineSimilarityQueueTestEnv"
+TARGET_QUEUE_URL = "https://sqs.eu-west-1.amazonaws.com/381922912532/jobSourcingLlmAtsQueueTestEnv"
 
 def store_result_in_dynamodb(offer_id, profile_id, candidate_id, scores: dict, status: str):
     now = datetime.utcnow().isoformat()

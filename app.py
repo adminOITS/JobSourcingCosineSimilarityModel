@@ -5,7 +5,6 @@ from matching import calculate_total_match_score
 import boto3
 import requests
 from boto3.dynamodb.conditions import Key
-import boto3
 from datetime import datetime
 from mappers import (
     map_job_offer_response_dto,
@@ -15,6 +14,9 @@ from mappers import (
 ssm = boto3.client("ssm")
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table("MatchingResults")
+
+sqs = boto3.client('sqs')
+TARGET_QUEUE_URL = "https://sqs.eu-west-1.amazonaws.com/381922912532/jobSourcingMatchingCosineSimilarityQueueTestEnv"
 
 def store_result_in_dynamodb(offer_id, profile_id, candidate_id, scores: dict, status: str):
     now = datetime.utcnow().isoformat()
@@ -111,6 +113,7 @@ def lambda_handler(event, context):
         profile_id = body.get("profileId")
         candidate_id = body.get("candidateId")
         total_profiles = body.get("totalProfile")
+        profiles_plan_count = body.get("profilesPlanCount")
 
         # Validate presence of all required fields
         missing_fields = []
@@ -125,45 +128,62 @@ def lambda_handler(event, context):
 
         if missing_fields:
             raise ValueError(f"Missing required fields in message: {', '.join(missing_fields)}")
-
-        token = get_access_token()
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-        offer_res = fetch_offer_dto(gateway_url, headers ,offer_id)
-        logger.info(f"offerFetch: {offer_res}")
-        offer_json= offer_res.json()
-        profile_res = fetch_profile_dto(gateway_url,headers ,candidate_id ,profile_id)
-        logger.info(f"profileFetch: {profile_res}")
-        profile_json=profile_res.json()
-
-        if not offer_json or not profile_json:
-            logger.error("Missing 'offerDto' or 'profileDto' in the payload")
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"error": "Missing required fields"})
+        
+        if profiles_plan_count is None:
+            profiles_plan_count = 100
+        logger.info(f"Profiles plan count :{profiles_plan_count }")
+        if total_profiles > profiles_plan_count :
+            token = get_access_token()
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
             }
+            offer_res = fetch_offer_dto(gateway_url, headers ,offer_id)
+            logger.info(f"offerFetch: {offer_res}")
+            offer_json= offer_res.json()
+            profile_res = fetch_profile_dto(gateway_url,headers ,candidate_id ,profile_id)
+            logger.info(f"profileFetch: {profile_res}")
+            profile_json=profile_res.json()
 
-        # Map to DTOs
-        offer_dto = map_job_offer_response_dto(offer_json)
-        logger.info(f"offerMapped: {offer_dto}")
-        profile_dto = map_profile_response_dto(profile_json)
-        logger.info(f"profileMapped: {profile_dto}")
+            if not offer_json or not profile_json:
+                logger.error("Missing 'offerDto' or 'profileDto' in the payload")
+                return {
+                    "statusCode": 400,
+                    "body": json.dumps({"error": "Missing required fields"})
+                }
 
-        # Calculate scores
-        result = calculate_all_matching_scores(offer_dto, profile_dto)
+            # Map to DTOs
+            offer_dto = map_job_offer_response_dto(offer_json)
+            logger.info(f"offerMapped: {offer_dto}")
+            profile_dto = map_profile_response_dto(profile_json)
+            logger.info(f"profileMapped: {profile_dto}")
 
-        logger.info(f"Matching result: {result}")
+            # Calculate scores
+            result = calculate_all_matching_scores(offer_dto, profile_dto)
+
+            logger.info(f"Matching result: {result}")
 
 
-        store_result_in_dynamodb(
-                offer_id=offer_id,
-                profile_id=profile_id,
-                candidate_id=candidate_id,
-                scores=result,
-                status="COMPLETED"
+            store_result_in_dynamodb(
+                    offer_id=offer_id,
+                    profile_id=profile_id,
+                    candidate_id=candidate_id,
+                    scores=result,
+                    status="COMPLETED"
+                )
+
+        else:
+            #push the messegs derectly to the advanced ai model to be processed sinde the tottal profiles are less then the plan
+            message = {
+                "offerId": offer_id,
+                "profileId": profile_id,
+                "candidateId": candidate_id
+            }
+            sqs.send_message(
+                QueueUrl=TARGET_QUEUE_URL,
+                MessageBody=json.dumps(message)
             )
+
         return {
             "statusCode": 200,
             "body": json.dumps(result, default=str)

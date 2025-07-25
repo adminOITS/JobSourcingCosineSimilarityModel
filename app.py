@@ -6,14 +6,18 @@ import boto3
 import requests
 from boto3.dynamodb.conditions import Key
 from datetime import datetime
+import time
+lambda_client = boto3.client('lambda')
 from mappers import (
     map_job_offer_response_dto,
     map_profile_response_dto
 )
 
 ssm = boto3.client("ssm")
+lambda_client = boto3.client('lambda')
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table("MatchingResults")
+table_Processed_Profiles_Count = dynamodb.Table("ProcessedProfilesTrack")
 
 sqs = boto3.client('sqs')
 TARGET_QUEUE_URL = "https://sqs.eu-west-1.amazonaws.com/381922912532/jobSourcingLlmAtsQueueTestEnv"
@@ -50,6 +54,46 @@ def store_result_in_dynamodb(offer_id, profile_id, candidate_id, scores: dict, s
     )
 
     logger.info(f"DynamoDB update response: {response}")
+
+def trigger_batch_processor_lambda(offer_id):
+    payload = {
+        "offerId": offer_id
+    }
+
+    response = lambda_client.invoke(
+        FunctionName='JobSourcingFanOuLLMtLambdaTestEnv',  
+        InvocationType='Event',  # async
+        Payload=json.dumps(payload)
+    )
+
+    logger.info(f"Triggered batch processor Lambda: {response}")
+
+def update_processed_profile_count(offer_id):
+    now = datetime.utcnow().isoformat()
+    ttl_timestamp = int(time.time()) + 86400  # 1 day
+
+    response = table_Processed_Profiles_Count.update_item(
+        Key={'offerId': offer_id},
+        UpdateExpression="""
+            SET 
+                updatedAt = :upd,
+                createdAt = if_not_exists(createdAt, :cre),
+                ttl = :ttl
+            ADD totalProcessedProfilescount :inc
+        """,
+        ExpressionAttributeValues={
+            ':inc': 1,
+            ':upd': now,
+            ':cre': now,
+            ':ttl': ttl_timestamp
+        },
+        ReturnValues="UPDATED_NEW"
+    )
+
+    new_count = response['Attributes'].get('totalProcessedProfilescount', 0)
+    logger.info(f"DynamoDB updated count for offerId {offer_id}: {new_count}")
+    return new_count
+
 
 
 
@@ -171,6 +215,16 @@ def lambda_handler(event, context):
                     scores=result,
                     status="COMPLETED"
                 )
+            # Increment processed count and get new total
+            processed_count = update_processed_profile_count_atomic(offer_id)
+
+            # Check if processing is complete
+            if processed_count >= total_profiles:
+                logger.info(f"All profiles processed for offer {offer_id}: {processed_count}/{total_profiles}")
+                trigger_batch_processor_lambda(offer_id)
+            else:
+                logger.info(f"Progress for offer {offer_id}: {processed_count}/{total_profiles}")
+
 
         else:
             #push the messegs derectly to the advanced ai model to be processed sinde the tottal profiles are less then the plan

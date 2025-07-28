@@ -69,53 +69,38 @@ def trigger_batch_processor_lambda(offer_id,profile_plan_count):
 
     logger.info(f"Triggered batch processor Lambda: {response}")
 
-def update_processed_profile_count(offer_id, rest=False):
+def update_processed_profile_count(offer_id,delete=False):
+    if delete:
+        # Delete the item if rest is True
+        response = table_Processed_Profiles_Count.delete_item(
+            Key={'offerId': offer_id}
+        )
+        logger.info(f"DynamoDB record deleted for offerId {offer_id}")
+        return 0  # Since the record is deleted, count is 0
     now = datetime.utcnow().isoformat()
     ttl_timestamp = int(time.time()) + 86400  # 1 day
 
-    if rest:
-        # Reset the count to 0
-        response = table_Processed_Profiles_Count.update_item(
-            Key={'offerId': offer_id},
-            UpdateExpression="""
-                SET 
-                    totalProcessedProfilescount = :zero,
-                    updatedAt = :upd,
-                    createdAt = if_not_exists(createdAt, :cre),
-                    timeToLiveInDataBase = :ttl
-            """,
-            ExpressionAttributeValues={
-                ':zero': 0,
-                ':upd': now,
-                ':cre': now,
-                ':ttl': ttl_timestamp
-            },
-            ReturnValues="UPDATED_NEW"
-        )
-    else:
-        # Increment the count by 1
-        response = table_Processed_Profiles_Count.update_item(
-            Key={'offerId': offer_id},
-            UpdateExpression="""
-                SET 
-                    updatedAt = :upd,
-                    createdAt = if_not_exists(createdAt, :cre),
-                    timeToLiveInDataBase = :ttl
-                ADD totalProcessedProfilescount :inc
-            """,
-            ExpressionAttributeValues={
-                ':inc': 1,
-                ':upd': now,
-                ':cre': now,
-                ':ttl': ttl_timestamp
-            },
-            ReturnValues="UPDATED_NEW"
-        )
+    response = table_Processed_Profiles_Count.update_item(
+        Key={'offerId': offer_id},
+        UpdateExpression="""
+            SET 
+                updatedAt = :upd,
+                createdAt = if_not_exists(createdAt, :cre),
+                timeToLiveInDataBase= :ttl
+            ADD totalProcessedProfilescount :inc
+        """,
+        ExpressionAttributeValues={
+            ':inc': 1,
+            ':upd': now,
+            ':cre': now,
+            ':ttl': ttl_timestamp
+        },
+        ReturnValues="UPDATED_NEW"
+    )
 
     new_count = response['Attributes'].get('totalProcessedProfilescount', 0)
     logger.info(f"DynamoDB updated count for offerId {offer_id}: {new_count}")
     return new_count
-
 
 
 

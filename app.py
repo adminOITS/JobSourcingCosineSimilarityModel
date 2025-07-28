@@ -79,7 +79,7 @@ def update_processed_profile_count(offer_id):
             SET 
                 updatedAt = :upd,
                 createdAt = if_not_exists(createdAt, :cre),
-                ttl = :ttl
+                timeToLiveInDataBase= :ttl
             ADD totalProcessedProfilescount :inc
         """,
         ExpressionAttributeValues={

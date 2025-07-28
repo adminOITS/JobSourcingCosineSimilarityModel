@@ -229,6 +229,7 @@ def lambda_handler(event, context):
             # Check if processing is complete
             if processed_count >= total_profiles:
                 logger.info(f"All profiles processed for offer {offer_id}: {processed_count}/{total_profiles}")
+                update_processed_profile_count(offer_id,delete=True)
                 trigger_batch_processor_lambda(offer_id,profiles_plan_count)
             else:
                 logger.info(f"Progress for offer {offer_id}: {processed_count}/{total_profiles}")

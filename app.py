@@ -58,7 +58,7 @@ def store_result_in_dynamodb(offer_id, profile_id, candidate_id, scores: dict, s
 def trigger_batch_processor_lambda(offer_id):
     payload = {
         "offerId": offer_id
-    }
+    } 
 
     response = lambda_client.invoke(
         FunctionName='JobSourcingFanOuLLMtLambdaTestEnv',  

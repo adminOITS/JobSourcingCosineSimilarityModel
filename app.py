@@ -55,9 +55,10 @@ def store_result_in_dynamodb(offer_id, profile_id, candidate_id, scores: dict, s
 
     logger.info(f"DynamoDB update response: {response}")
 
-def trigger_batch_processor_lambda(offer_id):
+def trigger_batch_processor_lambda(offer_id,profile_plan_count):
     payload = {
-        "offerId": offer_id
+        "offerId": offer_id,
+        "profilesPlanCount": profile_plan_count
     } 
 
     response = lambda_client.invoke(
@@ -216,7 +217,7 @@ def lambda_handler(event, context):
                     status="COMPLETED"
                 )
             # Increment processed count and get new total
-            processed_count = update_processed_profile_count_atomic(offer_id)
+            processed_count = update_processed_profile_count(offer_id)
 
             # Check if processing is complete
             if processed_count >= total_profiles:

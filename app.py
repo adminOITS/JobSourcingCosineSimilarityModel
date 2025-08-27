@@ -128,7 +128,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def get_access_token():
-    token_url = "https://job-sourcing.com/realms/jobsourcingrealm/protocol/openid-connect/token"
+    token_url = "https://auth.beta.job-sourcing.com/realms/jobsourcingrealm/protocol/openid-connect/token"
     client_id = "lamdaParsingAiClient"
     client_secret = CLIENT_SECRET_KEYCLOAK
 
